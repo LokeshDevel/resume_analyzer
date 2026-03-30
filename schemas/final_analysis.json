@@ -1,0 +1,157 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Final Analysis",
+  "description": "Complete ATS analysis output with score, breakdown, and recommendations",
+  "type": "object",
+  "properties": {
+    "analysis_id": {
+      "type": "string",
+      "description": "Unique identifier for this analysis"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ats_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Overall ATS compatibility score"
+    },
+    "score_band": {
+      "type": "string",
+      "enum": ["Weak", "Needs Improvement", "Strong", "Excellent"],
+      "description": "Human-readable score classification"
+    },
+    "category_scores": {
+      "type": "object",
+      "properties": {
+        "keyword_match": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "weight": { "type": "number", "default": 30 },
+            "weighted_score": { "type": "number" },
+            "details": { "type": "string" }
+          }
+        },
+        "skill_relevance": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "weight": { "type": "number", "default": 20 },
+            "weighted_score": { "type": "number" },
+            "details": { "type": "string" }
+          }
+        },
+        "project_quality": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "weight": { "type": "number", "default": 15 },
+            "weighted_score": { "type": "number" },
+            "details": { "type": "string" }
+          }
+        },
+        "experience_alignment": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "weight": { "type": "number", "default": 15 },
+            "weighted_score": { "type": "number" },
+            "details": { "type": "string" }
+          }
+        },
+        "resume_formatting": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "weight": { "type": "number", "default": 10 },
+            "weighted_score": { "type": "number" },
+            "details": { "type": "string" }
+          }
+        },
+        "education_fit": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "weight": { "type": "number", "default": 5 },
+            "weighted_score": { "type": "number" },
+            "details": { "type": "string" }
+          }
+        },
+        "grammar_readability": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "weight": { "type": "number", "default": 5 },
+            "weighted_score": { "type": "number" },
+            "details": { "type": "string" }
+          }
+        }
+      }
+    },
+    "matched_keywords": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Keywords found in both resume and JD"
+    },
+    "missing_keywords": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Important JD keywords missing from resume"
+    },
+    "semantic_similarity": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Cosine similarity between resume and JD embeddings"
+    },
+    "strengths": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Resume strong points"
+    },
+    "weaknesses": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Resume weak points"
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "section": { "type": "string" },
+          "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+          "suggestion": { "type": "string" }
+        }
+      },
+      "description": "Actionable improvement suggestions"
+    },
+    "rewritten_summary": {
+      "type": ["string", "null"],
+      "description": "AI-improved professional summary"
+    },
+    "improved_bullet_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "original": { "type": "string" },
+          "improved": { "type": "string" },
+          "section": { "type": "string" }
+        }
+      },
+      "description": "Before/after bullet point improvements"
+    },
+    "parsed_resume": {
+      "type": "object",
+      "description": "Full parsed resume data (ref: parsed_resume.json)"
+    },
+    "job_description": {
+      "type": "object",
+      "description": "Structured job description (ref: job_description.json)"
+    }
+  }
+}

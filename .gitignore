@@ -1,0 +1,31 @@
+# Environment
+.env
+__pycache__/
+*.pyc
+*.pyo
+
+# Uploads and temp
+uploads/*
+!uploads/.gitkeep
+.tmp/*
+!.tmp/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Python
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# Node (if any)
+node_modules/

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Job Description",
+  "description": "Structured representation of a target job description",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Job title"
+    },
+    "company": {
+      "type": ["string", "null"],
+      "description": "Company name if available"
+    },
+    "experience_level": {
+      "type": "string",
+      "enum": ["entry", "mid", "senior", "lead", "principal", "executive"],
+      "description": "Required experience level"
+    },
+    "required_skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Must-have skills and technologies"
+    },
+    "preferred_skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Nice-to-have skills"
+    },
+    "responsibilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Key job responsibilities"
+    },
+    "qualifications": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Education and certification requirements"
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "All extracted keywords for ATS matching"
+    },
+    "raw_text": {
+      "type": "string",
+      "description": "Original job description text"
+    }
+  }
+}

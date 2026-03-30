@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered Resume Analyzer — Get your ATS score, keyword analysis, and improvement suggestions in seconds.">
+    <title>Resume Analyzer — AI-Powered ATS Score & Feedback</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ═══ Animated Background ═══ -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <!-- ═══ Navigation ═══ -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <div class="nav-logo">
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <rect x="2" y="4" width="18" height="22" rx="2" stroke="url(#logo-grad)" stroke-width="2"/>
+                    <path d="M7 10H16M7 14H14M7 18H12" stroke="url(#logo-grad)" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="21" cy="7" r="5" fill="url(#logo-grad)" opacity="0.9"/>
+                    <path d="M19.5 7L20.5 8L22.5 6" stroke="#0a0a1a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0" y1="0" x2="28" y2="28">
+                            <stop stop-color="#818cf8"/>
+                            <stop offset="1" stop-color="#c084fc"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <span class="nav-title">ResumeAnalyzer<span class="nav-title-accent">.ai</span></span>
+        </div>
+        <div class="nav-actions">
+            <button class="btn btn-ghost" id="btn-history" title="View History">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>History</span>
+            </button>
+            <button class="btn btn-ghost" id="btn-health" title="API Status">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <span>Status</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ═══ Main Content ═══ -->
+    <main class="main" id="main">
+
+        <!-- ── Hero Section ── -->
+        <section class="hero" id="hero-section">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                AI-Powered Resume Analysis
+            </div>
+            <h1 class="hero-title">
+                Know Your <span class="gradient-text">ATS Score</span><br>
+                Before Recruiters Do
+            </h1>
+            <p class="hero-subtitle">
+                Upload your resume, paste the job description, and get instant AI feedback —
+                keyword gaps, score breakdown, and rewritten bullet points.
+            </p>
+        </section>
+
+        <!-- ── Upload Section ── -->
+        <section class="upload-section" id="upload-section">
+            <div class="card upload-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+                    </div>
+                    <h2 class="card-title">Upload Resume</h2>
+                </div>
+
+                <div class="dropzone" id="dropzone">
+                    <div class="dropzone-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    </div>
+                    <p class="dropzone-text">Drag & drop your resume here</p>
+                    <p class="dropzone-hint">or click to browse · PDF, DOCX, or Image</p>
+                    <input type="file" id="file-input" accept=".pdf,.docx,.png,.jpg,.jpeg" hidden>
+                </div>
+
+                <div class="file-preview hidden" id="file-preview">
+                    <div class="file-info">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-name" id="file-name">resume.pdf</span>
+                        <span class="file-size" id="file-size">2.1 MB</span>
+                    </div>
+                    <button class="btn-icon" id="file-remove" title="Remove file">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="card jd-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    </div>
+                    <h2 class="card-title">Job Description</h2>
+                </div>
+                <div class="textarea-wrapper">
+                    <textarea
+                        id="jd-input"
+                        class="jd-textarea"
+                        placeholder="Paste the target job description here...&#10;&#10;Example:&#10;We are looking for a Senior Software Engineer with experience in Python, React, AWS..."
+                        rows="8"
+                    ></textarea>
+                    <div class="char-count"><span id="char-count">0</span> characters</div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-analyze" id="btn-analyze" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Analyze Resume</span>
+            </button>
+        </section>
+
+        <!-- ── Loading State ── -->
+        <section class="loading-section hidden" id="loading-section">
+            <div class="card loading-card">
+                <div class="loading-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring spinner-ring-2"></div>
+                    <div class="spinner-ring spinner-ring-3"></div>
+                </div>
+                <h2 class="loading-title">Analyzing Your Resume</h2>
+                <div class="loading-stages">
+                    <div class="stage" id="stage-extraction">
+                        <div class="stage-dot"></div>
+                        <span>Extracting text...</span>
+                    </div>
+                    <div class="stage" id="stage-parsing">
+                        <div class="stage-dot"></div>
+                        <span>Parsing entities...</span>
+                    </div>
+                    <div class="stage" id="stage-comparing">
+                        <div class="stage-dot"></div>
+                        <span>Comparing with JD...</span>
+                    </div>
+                    <div class="stage" id="stage-scoring">
+                        <div class="stage-dot"></div>
+                        <span>Calculating ATS score...</span>
+                    </div>
+                    <div class="stage" id="stage-feedback">
+                        <div class="stage-dot"></div>
+                        <span>Generating feedback...</span>
+                    </div>
+                </div>
+                <p class="loading-hint">This usually takes 15-30 seconds</p>
+            </div>
+        </section>
+
+        <!-- ── Results Section ── -->
+        <section class="results-section hidden" id="results-section">
+
+            <!-- Score Header -->
+            <div class="results-header">
+                <div class="score-gauge-container">
+                    <svg class="score-gauge" viewBox="0 0 200 200" id="score-gauge">
+                        <circle class="gauge-bg" cx="100" cy="100" r="85" fill="none" stroke-width="12"/>
+                        <circle class="gauge-fill" cx="100" cy="100" r="85" fill="none" stroke-width="12"
+                            stroke-dasharray="534" stroke-dashoffset="534" id="gauge-fill"/>
+                        <text class="gauge-score" x="100" y="92" text-anchor="middle" id="gauge-score">0</text>
+                        <text class="gauge-label" x="100" y="115" text-anchor="middle" id="gauge-label">ATS Score</text>
+                    </svg>
+                </div>
+                <div class="score-details">
+                    <div class="score-band" id="score-band">—</div>
+                    <p class="score-description" id="score-description"></p>
+                    <div class="score-meta">
+                        <span class="meta-item" id="meta-filename">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>resume.pdf</span>
+                        </span>
+                        <span class="meta-item" id="meta-timestamp">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>Just now</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Breakdown -->
+            <div class="section-header">
+                <h2>Score Breakdown</h2>
+            </div>
+            <div class="category-grid" id="category-grid">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Keywords -->
+            <div class="keywords-row">
+                <div class="card keywords-card matched-card">
+                    <h3 class="keywords-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Matched Keywords
+                    </h3>
+                    <div class="keyword-tags" id="matched-keywords">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <div class="card keywords-card missing-card">
+                    <h3 class="keywords-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        Missing Keywords
+                    </h3>
+                    <div class="keyword-tags" id="missing-keywords">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strengths & Weaknesses -->
+            <div class="sw-row">
+                <div class="card sw-card">
+                    <h3 class="sw-title strengths-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        Strengths
+                    </h3>
+                    <ul class="sw-list" id="strengths-list"></ul>
+                </div>
+                <div class="card sw-card">
+                    <h3 class="sw-title weaknesses-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Areas to Improve
+                    </h3>
+                    <ul class="sw-list" id="weaknesses-list"></ul>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="section-header">
+                <h2>Recommendations</h2>
+            </div>
+            <div class="recommendations-list" id="recommendations-list">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Rewritten Summary -->
+            <div class="card rewrite-card" id="rewrite-section">
+                <h3 class="rewrite-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    AI-Rewritten Summary
+                </h3>
+                <p class="rewrite-content" id="rewritten-summary"></p>
+                <button class="btn btn-ghost btn-copy" id="btn-copy-summary" title="Copy to clipboard">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copy
+                </button>
+            </div>
+
+            <!-- Improved Bullets -->
+            <div class="section-header" id="bullets-header">
+                <h2>Improved Bullet Points</h2>
+            </div>
+            <div class="bullets-list" id="bullets-list">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Actions -->
+            <div class="results-actions">
+                <button class="btn btn-primary" id="btn-new-analysis">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Analysis
+                </button>
+                <button class="btn btn-ghost" id="btn-download-json">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download JSON
+                </button>
+            </div>
+        </section>
+
+        <!-- ── History Panel ── -->
+        <div class="history-panel hidden" id="history-panel">
+            <div class="panel-header">
+                <h2>Analysis History</h2>
+                <button class="btn-icon" id="btn-close-history">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="history-list" id="history-list">
+                <p class="history-empty">No analyses yet</p>
+            </div>
+        </div>
+
+        <!-- ── Health Modal ── -->
+        <div class="modal-overlay hidden" id="health-modal">
+            <div class="card modal-card">
+                <div class="modal-header">
+                    <h2>API Status</h2>
+                    <button class="btn-icon" id="btn-close-health">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <div class="health-grid" id="health-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Toast Container ── -->
+        <div class="toast-container" id="toast-container"></div>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
