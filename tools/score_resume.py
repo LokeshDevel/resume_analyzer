@@ -64,7 +64,7 @@ def score_skill_relevance(parsed_resume: dict, comparison_data: dict) -> dict:
     jd = comparison_data.get("jd_structured", {})
     required = jd.get("required_skills", [])
     preferred = jd.get("preferred_skills", [])
-    matched = [k.lower() for k in comparison_data.get("keyword_match", {}).get("matched", [])]
+    matched = [k.lower() for k in comparison_data.get("keyword_match", {}).get("matched", []) if k]
 
     # Count required skills matched
     required_matched = sum(1 for s in required if s.lower() in matched or
@@ -102,7 +102,7 @@ def score_project_quality(parsed_resume: dict, comparison_data: dict) -> dict:
     total_points = 0
     max_points = len(projects) * 100
 
-    jd_keywords = [k.lower() for k in comparison_data.get("jd_structured", {}).get("keywords", [])]
+    jd_keywords = [k.lower() for k in comparison_data.get("jd_structured", {}).get("keywords", []) if k]
 
     for proj in projects:
         points = 0
@@ -160,8 +160,8 @@ def score_experience_alignment(parsed_resume: dict, comparison_data: dict) -> di
         }
 
     jd = comparison_data.get("jd_structured", {})
-    jd_responsibilities = [r.lower() for r in jd.get("responsibilities", [])]
-    jd_keywords = [k.lower() for k in jd.get("keywords", [])]
+    jd_responsibilities = [r.lower() for r in jd.get("responsibilities", []) if r]
+    jd_keywords = [k.lower() for k in jd.get("keywords", []) if k]
 
     # Score based on semantic similarity if available
     sem = comparison_data.get("semantic_match", {})
@@ -256,7 +256,8 @@ def score_education(parsed_resume: dict, comparison_data: dict) -> dict:
         }
 
     jd = comparison_data.get("jd_structured", {})
-    qualifications = " ".join(jd.get("qualifications", [])).lower()
+    qualifications_list = jd.get("qualifications", []) or []
+    qualifications = " ".join([q for q in qualifications_list if q]).lower()
 
     points = 0
 
@@ -266,7 +267,7 @@ def score_education(parsed_resume: dict, comparison_data: dict) -> dict:
         points += 40
 
     # Degree level match (30 pts)
-    degrees = [e.get("degree", "").lower() for e in education]
+    degrees = [(e.get("degree") or "").lower() for e in education]
     degree_text = " ".join(degrees)
 
     if "phd" in qualifications and "phd" in degree_text:
@@ -279,7 +280,7 @@ def score_education(parsed_resume: dict, comparison_data: dict) -> dict:
         points += 15  # Has a degree but level doesn't match
 
     # Field relevance (20 pts)
-    fields = [e.get("field_of_study", "").lower() for e in education]
+    fields = [(e.get("field_of_study") or "").lower() for e in education]
     field_text = " ".join(fields)
     jd_keywords = [k.lower() for k in jd.get("keywords", [])]
     if any(k in field_text for k in jd_keywords):

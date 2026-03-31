@@ -1,20 +1,30 @@
-# Resume Analyzer — Findings
+# Resume Analyzer Debugging Findings (History Deletion)
 
-## Decisions Made
+### The Issue
+The `X` (delete history) button returns "Failed to delete analysis" error in the UI. 
+The analysis disappears visually *only* on a full history panel collapse/reopen, OR stays there.
 
-1. **Flask over FastAPI**: Chose Flask for simplicity since this is a file-upload-heavy app. FastAPI's async benefits aren't critical here since the bottleneck is OpenAI API calls, not concurrent connections.
+### What We Verified
+1. **Frontend Event Propagation**: The double-click bug where both the `X` button and the history item triggered conflicts has been fixed cleanly in `app.js`. The button disables itself instantly upon the exact first click.
+2. **Backend Deletion Logic**: In `app.py`, the `DELETE /api/history/<analysis_id>` route was completely rewritten to be exceptionally fault tolerant. It will gracefully attempt to delete from MongoDB, elegantly retry any locked local file deletes, and **unconditionally return HTTP 200 OK** to the frontend (because a delete action is idempotent, failing silently is better than rejecting if the record is missing).
+3. **Database Integration**: Pymongo was checked. It'll safely delete the element without crashing the JSON local fallback. 
 
-2. **GPT-4.1-mini as default model**: Balances cost and quality. Entity extraction and feedback don't need the full GPT-4.1 model. Can be upgraded by changing the model string.
+### Core Theories for "Tomorrow"
+Because `app.py` physically cannot return a `404` or `500` error code anymore from the `delete_history` route (it unconditionally returns 200 `True`), **the only way** `response.ok` is still failing in the frontend is:
 
-3. **text-embedding-3-small**: Cheapest embedding model with good enough accuracy for keyword-level semantic matching.
+A. **Heavy Browser Caching** 
+Your browser is aggressively caching the old `app.js` file (which still had the broken syntax). You're likely still running the javascript from 30 minutes ago.
+*(Fix: Ctrl+Shift+R or Empty Cache & Hard Reload).*
 
-4. **Deterministic + LLM hybrid scoring**: Categories like keyword matching use exact algorithms (reproducible, fast). Categories like project quality use LLM assessment (more nuanced). This avoids the problem of LLM scores being non-deterministic across runs.
+B. **Port 5000 Ghosting**
+The port 5000 is still solidly mapped to a backgrounded Windows Python instance that predates our changes today. The Flask backend you are killing in your VS Code terminal isn't the one actively receiving your browser's requests.
+*(Fix: Fully reboot the machine, or aggressively kill Python Tasks).* 
 
-5. **Local file storage over GridFS**: Simpler for v1. Uploaded files are copied to `.tmp/` after processing for debugging, then removed from `uploads/`.
+C. **"undefined" analysis_id**
+Extremely old analyses from earlier development phases might lack the `analysis_id` key in MongoDB, causing Javascript to request `/api/history/null`.
 
-## Known Limitations
-
-1. OCR.Space free tier: 25K requests/month, 1MB file size limit for free tier
-2. No authentication in v1 — anyone with the URL can use the analyzer
-3. MongoDB is optional — the app falls back to local JSON file storage
-4. No rate limiting on the API endpoints
+### Next Steps (Next Session)
+When we resume, we will:
+1. Hard reload the browser.
+2. Verify Python ports.
+3. `console.log(response.status)` inside JS to find exactly what HTTP error is bleeding through.

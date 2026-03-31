@@ -1000,6 +1000,50 @@ body {
     gap: var(--space-md);
     margin-top: var(--space-2xl);
     justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Auto-Fix Button */
+.btn-autofix {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
+    color: #021a0f;
+    font-weight: 700;
+    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-autofix::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%);
+    transform: translateX(-100%);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    60%, 100% { transform: translateX(100%); }
+}
+
+.btn-autofix:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(16, 185, 129, 0.45);
+}
+
+.btn-autofix:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-autofix:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn-autofix:disabled::before {
+    animation: none;
 }
 
 /* ── History Panel ────────────────────────────────────────────── */
@@ -1060,6 +1104,20 @@ body {
 .history-item:hover {
     border-color: var(--border-hover);
     background: rgba(129, 140, 248, 0.05);
+}
+
+.btn-delete-history {
+    opacity: 0.3;
+    transition: all var(--transition-fast);
+}
+
+.history-item:hover .btn-delete-history {
+    opacity: 1;
+}
+
+.btn-delete-history:hover {
+    color: var(--accent-red) !important;
+    background: rgba(239, 68, 68, 0.1) !important;
 }
 
 .history-score {
@@ -1227,12 +1285,13 @@ body {
     }
 
     .hero {
-        padding: var(--space-xl) 0 var(--space-lg);
+        padding: var(--space-lg) 0;
     }
 
     .results-header {
         flex-direction: column;
         text-align: center;
+        gap: var(--space-md);
     }
 
     .score-meta {
@@ -1249,6 +1308,7 @@ body {
 
     .history-panel {
         width: 100%;
+        max-width: 400px;
     }
 
     .navbar {
@@ -1260,16 +1320,16 @@ body {
     }
 
     .results-actions {
-        flex-direction: column;
-    }
-
-    .results-actions .btn {
-        width: 100%;
-        justify-content: center;
+        flex-wrap: wrap;
+        gap: var(--space-sm);
     }
 }
 
 @media (max-width: 480px) {
+    .main {
+        padding: var(--space-sm);
+    }
+
     .hero-title {
         font-size: 1.8rem;
     }
@@ -1281,5 +1341,86 @@ body {
 
     .gauge-score {
         font-size: 32px;
+    }
+
+    .dropzone {
+        padding: var(--space-xl) var(--space-md);
+    }
+
+    .results-actions {
+        flex-direction: column;
+    }
+
+    .results-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .history-panel {
+        max-width: 100%;
+    }
+}
+
+@media print {
+    :root {
+        --bg-primary: #ffffff !important;
+        --bg-secondary: #f9fafb !important;
+        --bg-card: #ffffff !important;
+        --bg-card-hover: #ffffff !important;
+        --bg-card-solid: #ffffff !important;
+
+        --text-primary: #000000 !important;
+        --text-secondary: #333333 !important;
+        --text-muted: #555555 !important;
+        --text-accent: #000000 !important;
+
+        --border-color: #e5e7eb !important;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    .bg-grid, .bg-glow, .navbar, .hero, .upload-section, .results-actions, .history-panel, .btn-copy, .toast-container {
+        display: none !important;
+    }
+
+    .results-section {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        animation: none !important;
+        display: block !important;
+    }
+
+    .category-grid, .keywords-row, .sw-row {
+        display: block !important;
+    }
+    
+    .card, .category-card, .keywords-card, .sw-card, .rec-card, .bullet-card {
+        background: #ffffff !important;
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin-bottom: 20px !important;
+        display: block !important;
+    }
+    
+    .score-gauge-container circle {
+        stroke: #e5e7eb !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6, p, span, div, li {
+        color: #000000;
+        text-shadow: none !important;
+    }
+
+    .score-band, .keyword-tag, .bullet-original, .bullet-improved, .rec-priority {
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
     }
 }

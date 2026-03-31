@@ -33,6 +33,8 @@ const healthModal = $("#health-modal");
 const btnCloseHealth = $("#btn-close-health");
 const btnNewAnalysis = $("#btn-new-analysis");
 const btnDownloadJson = $("#btn-download-json");
+const btnDownloadDocx = $("#btn-download-docx");
+const btnAutofixDocx = $("#btn-autofix-docx");
 const btnCopySummary = $("#btn-copy-summary");
 const toastContainer = $("#toast-container");
 
@@ -276,6 +278,14 @@ function showResults(data) {
     // Improved Bullets
     renderBullets(data.improved_bullet_points);
 
+    // Auto-Fix button — only show for .docx uploads
+    const origName = (data.original_filename || "").toLowerCase();
+    if (origName.endsWith(".docx") && data.safe_filename) {
+        btnAutofixDocx.classList.remove("hidden");
+    } else {
+        btnAutofixDocx.classList.add("hidden");
+    }
+
     // Scroll to top of results
     resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -472,12 +482,21 @@ async function loadHistory() {
                 el.className = "history-item";
                 el.innerHTML = `
                     <span class="history-score" style="color: ${getScoreColor(item.ats_score)}">${Math.round(item.ats_score)}</span>
-                    <div class="history-info">
+                    <div class="history-info" style="flex: 1;">
                         <div class="history-filename">${item.original_filename || 'resume'}</div>
                         <div class="history-date">${new Date(item.timestamp).toLocaleDateString()}</div>
                     </div>
+                    <button class="btn-icon btn-delete-history" data-id="${item.analysis_id}" title="Delete" style="color: var(--text-muted); padding: 4px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
                 `;
-                el.addEventListener("click", () => loadAnalysis(item.analysis_id));
+                el.addEventListener("click", (e) => {
+                    if (e.target.closest(".btn-delete-history")) {
+                        deleteHistoryItem(item.analysis_id, el);
+                    } else {
+                        loadAnalysis(item.analysis_id);
+                    }
+                });
                 list.appendChild(el);
             });
         } else {
@@ -485,6 +504,38 @@ async function loadHistory() {
         }
     } catch {
         list.innerHTML = '<p class="history-empty">Failed to load history</p>';
+    }
+}
+
+async function deleteHistoryItem(id, listElement) {
+    const btn = listElement.querySelector(".btn-delete-history");
+    if (btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+    }
+    try {
+        const response = await fetch(`${API}/api/history/${id}`, { method: "DELETE" });
+        if (response.ok) {
+            listElement.remove();
+            showToast("Analysis deleted", "success");
+            const list = $("#history-list");
+            if (list.children.length === 0) {
+                list.innerHTML = '<p class="history-empty">No analyses yet</p>';
+            }
+        } else {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = "";
+            }
+            showToast("Failed to delete analysis", "error");
+        }
+    } catch {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = "";
+        }
+        showToast("Error connecting to server", "error");
     }
 }
 
@@ -548,10 +599,66 @@ function setupResultsActions() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `resume_analysis_${currentAnalysis.analysis_id || 'export'}.json`;
+        a.download = `Resume_Analysis_${currentAnalysis.ats_score || 'Report'}.json`;
+        a.style.display = "none";
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
-        showToast("Analysis downloaded", "success");
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 1000);
+    });
+
+    // Native form POST downloader (bypasses browser block on async anchor clicks)
+    function downloadDocxViaForm(endpoint, analysisData) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = endpoint;
+        form.style.display = "none";
+        
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "data";
+        input.value = JSON.stringify(analysisData);
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+        
+        setTimeout(() => document.body.removeChild(form), 1000);
+    }
+
+    // Download DOCX report
+    btnDownloadDocx.addEventListener("click", () => {
+        if (!currentAnalysis) return;
+        btnDownloadDocx.disabled = true;
+        try {
+            downloadDocxViaForm(`${API}/api/download/docx`, currentAnalysis);
+            showToast("Downloading DOCX report...", "success");
+        } catch (err) {
+            showToast(`DOCX download failed: ${err.message}`, "error");
+        } finally {
+            setTimeout(() => { btnDownloadDocx.disabled = false; }, 1000);
+        }
+    });
+
+    // Auto-Fix Resume — patches the user's original .docx with AI improvements
+    btnAutofixDocx.addEventListener("click", () => {
+        if (!currentAnalysis || !currentAnalysis.safe_filename) return;
+        btnAutofixDocx.disabled = true;
+        const originalLabel = btnAutofixDocx.querySelector("span").textContent;
+        btnAutofixDocx.querySelector("span").textContent = "Preparing…";
+        try {
+            downloadDocxViaForm(`${API}/api/download/autofix-docx`, currentAnalysis);
+            showToast("✨ Auto-fixed resume downloading...", "success");
+        } catch (err) {
+            showToast(`Auto-fix failed: ${err.message}`, "error");
+        } finally {
+            setTimeout(() => {
+                btnAutofixDocx.disabled = false;
+                btnAutofixDocx.querySelector("span").textContent = originalLabel;
+            }, 1500);
+        }
     });
 
     btnCopySummary.addEventListener("click", () => {

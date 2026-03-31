@@ -13,13 +13,14 @@ Usage:
 
 import os
 import sys
+import io
 import json
 import uuid
 import traceback
 from pathlib import Path
 from datetime import datetime, timezone
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -34,6 +35,8 @@ from tools.extract_entities import extract_entities
 from tools.compare_with_job_description import compare_resume_with_jd
 from tools.score_resume import calculate_ats_score
 from tools.generate_feedback import generate_feedback, save_analysis
+from tools.docx_generator import generate_docx_report
+from tools.resume_updater import update_docx_in_place
 
 # ─── App Configuration ───────────────────────────────────────────────────────
 
@@ -51,7 +54,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 ALLOWED_EXTENSIONS = {"pdf", "docx", "png", "jpg", "jpeg", "bmp", "tiff", "webp"}
 
 # Environment variables
-OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+GROQ_KEY = os.getenv("GROQ_API_KEY", "")
 OCR_KEY = os.getenv("OCR_SPACE_API_KEY", "")
 MONGO_URI = os.getenv("MONGODB_URI", "")
 MONGO_DB = os.getenv("MONGODB_DB_NAME", "resume_analyzer")
@@ -114,11 +117,71 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "services": {
-            "openai": bool(OPENAI_KEY and OPENAI_KEY != "your_openai_key_here"),
+            "groq": bool(GROQ_KEY and len(GROQ_KEY) > 10),
             "ocr_space": bool(OCR_KEY and OCR_KEY != "your_ocr_space_key_here"),
             "mongodb": mongo_ok,
         },
     })
+
+
+@app.route("/api/download/docx", methods=["POST"])
+def download_docx():
+    """Generates a DOCX from the provided analysis JSON."""
+    try:
+        import json
+        if request.is_json:
+            data = request.json
+        else:
+            raw_data = request.form.get("data")
+            data = json.loads(raw_data) if raw_data else None
+            
+        if not data:
+            return api_response(False, error="No JSON data provided", status_code=400)
+            
+        docx_bytes = generate_docx_report(data)
+        return send_file(
+            io.BytesIO(docx_bytes),
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            as_attachment=True,
+            download_name=f"Resume_Analysis_{data.get('ats_score', 'Report')}.docx"
+        )
+    except Exception as e:
+        return api_response(False, error=str(e), status_code=500)
+
+
+@app.route("/api/download/autofix-docx", methods=["POST"])
+def autofix_docx():
+    """Patches the original DOCX with AI-improved bullet points and returns the patched file."""
+    try:
+        import json
+        if request.is_json:
+            data = request.json
+        else:
+            raw_data = request.form.get("data")
+            data = json.loads(raw_data) if raw_data else None
+
+        if not data:
+            return api_response(False, error="No JSON data provided", status_code=400)
+            
+        safe_filename = data.get("safe_filename")
+        if not safe_filename:
+            return api_response(False, error="No valid file reference found", status_code=400)
+            
+        file_path = str(TMP_DIR / safe_filename)
+        if not os.path.exists(file_path):
+            return api_response(False, error="Original file expired or missing from server", status_code=404)
+            
+        patched_bytes = update_docx_in_place(file_path, data)
+        
+        return send_file(
+            io.BytesIO(patched_bytes),
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            as_attachment=True,
+            download_name=f"AutoFixed_{data.get('original_filename', 'Resume.docx')}"
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return api_response(False, error="Failed to patch DOCX: " + str(e), status_code=500)
 
 
 @app.route("/api/analyze", methods=["POST"])
@@ -154,10 +217,10 @@ def analyze_resume():
             status_code=400,
         )
 
-    if not OPENAI_KEY or OPENAI_KEY == "your_openai_key_here":
+    if not GROQ_KEY or len(GROQ_KEY) < 10:
         return api_response(
             False,
-            error="OpenAI API key not configured. Set OPENAI_API_KEY in .env",
+            error="Groq API key not configured. Set GROQ_API_KEY in .env",
             status_code=500,
         )
 
@@ -176,7 +239,7 @@ def analyze_resume():
     try:
         # Stage 1: Extract text
         pipeline_status["stage"] = "text_extraction"
-        text_result = extract_text(file_path, OCR_KEY)
+        text_result = extract_text(file_path, OCR_KEY)  # OCR unchanged
         if not text_result["success"]:
             return api_response(False, error=f"Text extraction failed: {text_result['error']}", status_code=422)
         if len(text_result["text"].strip()) < 20:
@@ -189,7 +252,7 @@ def analyze_resume():
 
         # Stage 2: Extract entities
         pipeline_status["stage"] = "entity_extraction"
-        entity_result = extract_entities(text_result["text"], OPENAI_KEY)
+        entity_result = extract_entities(text_result["text"], GROQ_KEY)
         if not entity_result["success"]:
             return api_response(False, error=f"Entity extraction failed: {entity_result['error']}", status_code=422)
 
@@ -204,7 +267,7 @@ def analyze_resume():
 
         # Stage 3: Compare with JD
         pipeline_status["stage"] = "jd_comparison"
-        comparison_result = compare_resume_with_jd(parsed_resume, jd_text, OPENAI_KEY)
+        comparison_result = compare_resume_with_jd(parsed_resume, jd_text, GROQ_KEY)
         if not comparison_result["success"]:
             return api_response(False, error=f"JD comparison failed: {comparison_result['error']}", status_code=422)
 
@@ -213,7 +276,7 @@ def analyze_resume():
 
         # Stage 4: Calculate ATS score
         pipeline_status["stage"] = "scoring"
-        score_result = calculate_ats_score(parsed_resume, comparison_data, OPENAI_KEY)
+        score_result = calculate_ats_score(parsed_resume, comparison_data, GROQ_KEY)
         if not score_result["success"]:
             return api_response(False, error=f"Scoring failed: {score_result['error']}", status_code=422)
 
@@ -222,12 +285,13 @@ def analyze_resume():
 
         # Stage 5: Generate feedback
         pipeline_status["stage"] = "feedback_generation"
-        feedback_result = generate_feedback(parsed_resume, score_data, comparison_data, jd_text, OPENAI_KEY)
+        feedback_result = generate_feedback(parsed_resume, score_data, comparison_data, jd_text, GROQ_KEY)
         if not feedback_result["success"]:
             return api_response(False, error=f"Feedback generation failed: {feedback_result['error']}", status_code=422)
 
         final_analysis = feedback_result["data"]
         final_analysis["original_filename"] = file.filename
+        final_analysis["safe_filename"] = safe_filename
         pipeline_status["stages_completed"].append("feedback_generation")
 
         # ── Save results ─────────────────────────────────────────────────────
@@ -322,13 +386,41 @@ def get_analysis(analysis_id):
         except Exception:
             pass
 
-    # Fallback: read from file
     filepath = OUTPUT_DIR / f"analysis_{analysis_id}.json"
     if filepath.exists():
         data = json.loads(filepath.read_text(encoding="utf-8"))
         return api_response(True, data)
 
     return api_response(False, error="Analysis not found", status_code=404)
+
+
+@app.route("/api/history/<analysis_id>", methods=["DELETE"])
+def delete_history(analysis_id):
+    """Delete a specific analysis from history."""
+    
+    # Try MongoDB first
+    collection = get_mongo_collection()
+    if collection is not None:
+        try:
+            collection.delete_one({"analysis_id": analysis_id})
+        except Exception as e:
+            print(f"MongoDB delete error for {analysis_id}: {e}")
+            
+    # Delete from local fallback storage
+    filepath = OUTPUT_DIR / f"analysis_{analysis_id}.json"
+    if filepath.exists():
+        try:
+            os.remove(filepath)
+        except Exception as e:
+            import time
+            time.sleep(0.2) # Small wait if antivirus/Windows locked the read handle
+            try:
+                os.remove(filepath)
+            except Exception as e2:
+                print(f"Local delete error for {analysis_id}: {e2}")
+            
+    # For a DELETE op on history, it is idempotent. Always return success.
+    return api_response(True, {"message": "Analysis deleted"})
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -338,9 +430,9 @@ if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "true").lower() == "true"
 
     print(f"\n🚀  Resume Analyzer API starting on http://localhost:{port}")
-    print(f"    OpenAI: {'✅ configured' if OPENAI_KEY and OPENAI_KEY != 'your_openai_key_here' else '❌ not configured'}")
-    print(f"    OCR:    {'✅ configured' if OCR_KEY and OCR_KEY != 'your_ocr_space_key_here' else '❌ not configured'}")
-    print(f"    MongoDB:{'✅ configured' if MONGO_URI and 'username:password' not in MONGO_URI else '❌ not configured'}")
+    print(f"    Groq:     {'configured' if GROQ_KEY and len(GROQ_KEY) > 10 else 'not configured'}")
+    print(f"    OCR:      {'configured' if OCR_KEY and OCR_KEY != 'your_ocr_space_key_here' else 'not configured'}")
+    print(f"    MongoDB:  {'configured' if MONGO_URI and 'username:password' not in MONGO_URI else 'not configured'}")
     print()
 
     app.run(host="0.0.0.0", port=port, debug=debug)
