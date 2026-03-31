@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 from dotenv import load_dotenv
+import jwt
 
 # Load environment
 load_dotenv()
@@ -59,6 +60,18 @@ OCR_KEY = os.getenv("OCR_SPACE_API_KEY", "")
 MONGO_URI = os.getenv("MONGODB_URI", "")
 MONGO_DB = os.getenv("MONGODB_DB_NAME", "resume_analyzer")
 MONGO_COLLECTION = os.getenv("MONGODB_COLLECTION", "analyses")
+JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-default-key-change-in-production")
+
+def get_user_from_token():
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            return payload.get("user_id")
+        except Exception:
+            return None
+    return None
 
 
 def get_mongo_collection():
@@ -86,6 +99,17 @@ def api_response(success: bool, data=None, error=None, status_code=200):
         "error": error,
     }), status_code
 
+# ─── Auth Routes ──────────────────────────────────────────────────────────────
+
+@app.route("/api/init-session", methods=["POST"])
+def init_session():
+    """Provides an anonymous JWT session token for isolating user history."""
+    try:
+        user_id = str(uuid.uuid4())
+        token = jwt.encode({"user_id": user_id}, JWT_SECRET, algorithm="HS256")
+        return api_response(True, {"token": token, "user_id": user_id})
+    except Exception as e:
+        return api_response(False, error=str(e), status_code=500)
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -193,6 +217,9 @@ def analyze_resume():
         - file: Resume file (PDF/DOCX/Image)
         - job_description: Target job description text
     """
+    user_id = get_user_from_token()
+    if not user_id:
+        return api_response(False, error="Unauthorized: Invalid or missing session token.", status_code=401)
 
     # ── Validate inputs ──────────────────────────────────────────────────────
     if "file" not in request.files:
@@ -292,6 +319,7 @@ def analyze_resume():
         final_analysis = feedback_result["data"]
         final_analysis["original_filename"] = file.filename
         final_analysis["safe_filename"] = safe_filename
+        final_analysis["user_id"] = user_id
         pipeline_status["stages_completed"].append("feedback_generation")
 
         # ── Save results ─────────────────────────────────────────────────────
@@ -334,12 +362,16 @@ def analyze_resume():
 @app.route("/api/history", methods=["GET"])
 def get_history():
     """Fetch past analyses."""
+    user_id = get_user_from_token()
+    if not user_id:
+        return api_response(False, error="Unauthorized", status_code=401)
+
     # Try MongoDB first
     collection = get_mongo_collection()
     if collection is not None:
         try:
             analyses = list(collection.find(
-                {},
+                {"user_id": user_id},
                 {
                     "analysis_id": 1,
                     "timestamp": 1,
@@ -357,9 +389,12 @@ def get_history():
 
     # Fallback: read from outputs/ directory
     analyses = []
-    for f in sorted(OUTPUT_DIR.glob("analysis_*.json"), reverse=True)[:50]:
+    for f in sorted(OUTPUT_DIR.glob("analysis_*.json"), reverse=True)[:100]:
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
+            if data.get("user_id") != user_id:
+                continue
+            
             analyses.append({
                 "analysis_id": data.get("analysis_id"),
                 "timestamp": data.get("timestamp"),
@@ -376,11 +411,15 @@ def get_history():
 @app.route("/api/analysis/<analysis_id>", methods=["GET"])
 def get_analysis(analysis_id):
     """Fetch a single analysis result."""
+    user_id = get_user_from_token()
+    if not user_id:
+        return api_response(False, error="Unauthorized", status_code=401)
+
     # Try MongoDB first
     collection = get_mongo_collection()
     if collection is not None:
         try:
-            doc = collection.find_one({"analysis_id": analysis_id}, {"_id": 0})
+            doc = collection.find_one({"analysis_id": analysis_id, "user_id": user_id}, {"_id": 0})
             if doc:
                 return api_response(True, doc)
         except Exception:
@@ -389,20 +428,26 @@ def get_analysis(analysis_id):
     filepath = OUTPUT_DIR / f"analysis_{analysis_id}.json"
     if filepath.exists():
         data = json.loads(filepath.read_text(encoding="utf-8"))
-        return api_response(True, data)
+        if data.get("user_id") == user_id:
+            return api_response(True, data)
 
     return api_response(False, error="Analysis not found", status_code=404)
-
 
 @app.route("/api/history/<analysis_id>", methods=["DELETE"])
 def delete_history(analysis_id):
     """Delete a specific analysis from history."""
+    user_id = get_user_from_token()
+    if not user_id:
+        return api_response(False, error="Unauthorized", status_code=401)
     
     # Try MongoDB first
     collection = get_mongo_collection()
     if collection is not None:
         try:
-            collection.delete_one({"analysis_id": analysis_id})
+            result = collection.delete_one({"analysis_id": analysis_id, "user_id": user_id})
+            if result.deleted_count == 0:
+                # E.g. file belongs to someone else or doesn't exist
+                pass
         except Exception as e:
             print(f"MongoDB delete error for {analysis_id}: {e}")
             
@@ -410,6 +455,11 @@ def delete_history(analysis_id):
     filepath = OUTPUT_DIR / f"analysis_{analysis_id}.json"
     if filepath.exists():
         try:
+            # Check permission first
+            data = json.loads(filepath.read_text(encoding="utf-8"))
+            if data.get("user_id") != user_id:
+                return api_response(False, error="Unauthorized", status_code=401)
+                
             os.remove(filepath)
         except Exception as e:
             import time

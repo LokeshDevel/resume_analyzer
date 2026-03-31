@@ -7,6 +7,7 @@ const API = window.location.origin;
 // ── State ────────────────────────────────────────────────────────
 let selectedFile = null;
 let currentAnalysis = null;
+let sessionToken = localStorage.getItem("resume_session_token");
 
 // ── DOM References ───────────────────────────────────────────────
 const $ = (sel) => document.querySelector(sel);
@@ -39,7 +40,8 @@ const btnCopySummary = $("#btn-copy-summary");
 const toastContainer = $("#toast-container");
 
 // ── Initialization ───────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await initializeSession();
     setupDropzone();
     setupTextarea();
     setupAnalyzeButton();
@@ -47,6 +49,21 @@ document.addEventListener("DOMContentLoaded", () => {
     setupResultsActions();
     updateAnalyzeButton();
 });
+
+async function initializeSession() {
+    if (!sessionToken) {
+        try {
+            const res = await fetch(`${API}/api/init-session`, { method: "POST" });
+            const data = await res.json();
+            if (data.success && data.data.token) {
+                sessionToken = data.data.token;
+                localStorage.setItem("resume_session_token", sessionToken);
+            }
+        } catch (err) {
+            console.error("Failed to initialize session logic:", err);
+        }
+    }
+}
 
 // ── Dropzone ─────────────────────────────────────────────────────
 function setupDropzone() {
@@ -148,6 +165,9 @@ async function runAnalysis() {
     try {
         const response = await fetch(`${API}/api/analyze`, {
             method: "POST",
+            headers: {
+                "Authorization": `Bearer ${sessionToken}`
+            },
             body: formData,
         });
 
@@ -472,7 +492,9 @@ async function loadHistory() {
     list.innerHTML = '<p class="history-empty">Loading...</p>';
 
     try {
-        const response = await fetch(`${API}/api/history`);
+        const response = await fetch(`${API}/api/history`, {
+            headers: { "Authorization": `Bearer ${sessionToken}` }
+        });
         const result = await response.json();
 
         if (result.success && result.data.length > 0) {
@@ -515,7 +537,10 @@ async function deleteHistoryItem(id, listElement) {
         btn.style.opacity = "0.5";
     }
     try {
-        const response = await fetch(`${API}/api/history/${id}`, { method: "DELETE" });
+        const response = await fetch(`${API}/api/history/${id}`, { 
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${sessionToken}` }
+        });
         if (response.ok) {
             listElement.remove();
             showToast("Analysis deleted", "success");
@@ -541,7 +566,9 @@ async function deleteHistoryItem(id, listElement) {
 
 async function loadAnalysis(analysisId) {
     try {
-        const response = await fetch(`${API}/api/analysis/${analysisId}`);
+        const response = await fetch(`${API}/api/analysis/${analysisId}`, {
+            headers: { "Authorization": `Bearer ${sessionToken}` }
+        });
         const result = await response.json();
         if (result.success) {
             currentAnalysis = result.data;

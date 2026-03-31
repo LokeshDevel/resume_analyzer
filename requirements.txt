@@ -24,3 +24,6 @@ numpy>=1.26.0
 
 # Production Server (Render Deployment)
 gunicorn>=21.2.0
+
+# Authentication
+PyJWT>=2.8.0
